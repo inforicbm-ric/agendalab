@@ -838,7 +838,9 @@
     display:flex;
     gap:8px;
     margin-bottom:10px;
+    flex-wrap:wrap;
   }
+  .bulk-add-row .time-input{ width:100px; }
   .bulk-add-row input{
     border:1px solid var(--line);
     border-radius:8px;
@@ -1270,6 +1272,7 @@
       <div class="bulk-subtabs">
         <label><input type="radio" name="bulkSub" value="especificas" checked> Datas específicas</label>
         <label><input type="radio" name="bulkSub" value="recorrente"> Recorrente (mesmo dia da semana)</label>
+        <label><input type="radio" name="bulkSub" value="horarios"> Datas e horários específicos</label>
       </div>
 
       <div id="bulkEspecificas">
@@ -1297,6 +1300,16 @@
         </div>
       </div>
 
+      <div id="bulkHorarios" style="display:none;">
+        <div class="bulk-add-row">
+          <input type="text" id="bulkHorData" class="date-input" readonly placeholder="dd/mm/aaaa">
+          <input type="text" id="bulkHorInicio" class="time-input" inputmode="numeric" maxlength="5" placeholder="Início">
+          <input type="text" id="bulkHorFim" class="time-input" inputmode="numeric" maxlength="5" placeholder="Fim">
+          <button type="button" class="primary" id="btnAddHorario">+ Adicionar</button>
+        </div>
+        <div class="chips" id="chipsHorarios"></div>
+      </div>
+
       <div id="previewBox"></div>
     </div>
 
@@ -1305,23 +1318,19 @@
       <div class="secao-form">
         <div class="secao-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M8 2v3M16 2v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg> Quando e onde</div>
         <div class="field-grid">
-          <div class="field" id="campoDataUnico">
+          <div class="field full" id="campoDataUnico">
             <label for="fData">Data</label>
             <input type="text" id="fData" class="date-input" readonly placeholder="dd/mm/aaaa">
           </div>
-          <div class="field">
-            <label for="fEnsino">Ensino</label>
-            <select id="fEnsino" required></select>
-          </div>
-          <div class="field">
+          <div class="field full">
             <label for="fLaboratorio">Laboratório</label>
             <select id="fLaboratorio" required></select>
           </div>
-          <div class="field">
+          <div class="field" id="campoHorarioInicio">
             <label for="fInicio">Horário início</label>
             <input type="text" id="fInicio" class="time-input" inputmode="numeric" maxlength="5" placeholder="00:00" required>
           </div>
-          <div class="field">
+          <div class="field" id="campoHorarioFim">
             <label for="fFim">Horário fim</label>
             <input type="text" id="fFim" class="time-input" inputmode="numeric" maxlength="5" placeholder="00:00" required>
           </div>
@@ -1350,13 +1359,17 @@
         <div class="secao-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v16H6.5A1.5 1.5 0 0 0 5 20.5v-16Z"/><path d="M19 19H6.5A1.5 1.5 0 0 0 5 20.5"/></svg> Detalhes</div>
         <div class="field-grid">
           <div class="field">
-            <label for="fTurma">Período / turma</label>
-            <input type="text" id="fTurma" list="fTurmaLista" placeholder="ex: 602, 2M1" autocomplete="off">
-            <datalist id="fTurmaLista"></datalist>
+            <label for="fEnsino">Ensino</label>
+            <select id="fEnsino" required></select>
           </div>
           <div class="field">
             <label for="fCursoSetor">Curso / setor</label>
             <select id="fCursoSetor"></select>
+          </div>
+          <div class="field">
+            <label for="fTurma">Período / turma</label>
+            <input type="text" id="fTurma" list="fTurmaLista" placeholder="ex: 602, 2M1" autocomplete="off">
+            <datalist id="fTurmaLista"></datalist>
           </div>
           <div class="field">
             <label for="fDisciplina">Disciplina / atividade</label>
@@ -2157,7 +2170,9 @@
   const campoDataUnico = document.getElementById("campoDataUnico");
   const bulkEspecificas = document.getElementById("bulkEspecificas");
   const bulkRecorrente = document.getElementById("bulkRecorrente");
+  const bulkHorarios = document.getElementById("bulkHorarios");
   const chipsDatas = document.getElementById("chipsDatas");
+  const chipsHorarios = document.getElementById("chipsHorarios");
   const previewBox = document.getElementById("previewBox");
   const selDiaSemana = document.getElementById("bulkDiaSemana");
 
@@ -2166,9 +2181,10 @@
   });
 
   let modo = "unico";        // "unico" | "massa"
-  let bulkSub = "especificas"; // "especificas" | "recorrente"
+  let bulkSub = "especificas"; // "especificas" | "recorrente" | "horarios"
   let datasEspecificas = [];   // array de "yyyy-mm-dd", sem duplicatas
-  let previewAtual = [];       // [{data, ok, motivo, marcado}]
+  let horariosEspecificos = []; // [{data, inicio, fim}] — usado no modo "horarios"
+  let previewAtual = [];       // [{data, inicio, fim, ok, motivo, marcado}]
 
   function setModo(novoModo){
     modo = novoModo;
@@ -2178,7 +2194,16 @@
     bulkPanel.style.display = modo === "massa" ? "block" : "none";
     campoDataUnico.style.display = modo === "massa" ? "none" : "flex";
     document.getElementById("fData").required = modo !== "massa";
+    atualizarCampoHorarioCompartilhado();
     atualizarPrevia();
+  }
+
+  function atualizarCampoHorarioCompartilhado(){
+    const esconder = modo === "massa" && bulkSub === "horarios";
+    document.getElementById("campoHorarioInicio").style.display = esconder ? "none" : "flex";
+    document.getElementById("campoHorarioFim").style.display = esconder ? "none" : "flex";
+    document.getElementById("fInicio").required = !esconder;
+    document.getElementById("fFim").required = !esconder;
   }
 
   modeTabs.querySelectorAll(".mode-tab").forEach(btn=>{
@@ -2190,6 +2215,8 @@
       bulkSub = ev.target.value;
       bulkEspecificas.style.display = bulkSub === "especificas" ? "block" : "none";
       bulkRecorrente.style.display = bulkSub === "recorrente" ? "block" : "none";
+      bulkHorarios.style.display = bulkSub === "horarios" ? "block" : "none";
+      atualizarCampoHorarioCompartilhado();
       atualizarPrevia();
     });
   });
@@ -2228,6 +2255,44 @@
   ligarDatePicker(document.getElementById("bulkAte"), atualizarPrevia);
   selDiaSemana.addEventListener("change", atualizarPrevia);
 
+  // ---- datas e horários específicos: cada linha tem seu próprio horário ----
+  const inputBulkHorData = document.getElementById("bulkHorData");
+  const inputBulkHorInicio = document.getElementById("bulkHorInicio");
+  const inputBulkHorFim = document.getElementById("bulkHorFim");
+  ligarDatePicker(inputBulkHorData, ()=>{});
+  ligarMascaraHorario(inputBulkHorInicio);
+  ligarMascaraHorario(inputBulkHorFim);
+
+  document.getElementById("btnAddHorario").addEventListener("click", ()=>{
+    const data = getDateVal(inputBulkHorData);
+    const ini = inputBulkHorInicio.value;
+    const fim = inputBulkHorFim.value;
+    if(!data || !ini || !fim || minutos(fim) <= minutos(ini)) return;
+    horariosEspecificos.push({ data, inicio:ini, fim });
+    horariosEspecificos.sort((a,b)=> a.data===b.data ? minutos(a.inicio)-minutos(b.inicio) : (a.data<b.data?-1:1));
+    renderChipsHorarios();
+    atualizarPrevia();
+    inputBulkHorInicio.value = "";
+    inputBulkHorFim.value = "";
+  });
+
+  function renderChipsHorarios(){
+    if(horariosEspecificos.length === 0){
+      chipsHorarios.innerHTML = `<span class="empty-hint">Nenhum horário adicionado ainda.</span>`;
+      return;
+    }
+    chipsHorarios.innerHTML = horariosEspecificos.map((h,i) => `
+      <span class="chip">${fmtDateBR(h.data)} · ${h.inicio}–${h.fim} <button type="button" data-remover-h="${i}">×</button></span>
+    `).join("");
+    chipsHorarios.querySelectorAll("button[data-remover-h]").forEach(b=>{
+      b.addEventListener("click", ()=>{
+        horariosEspecificos.splice(Number(b.dataset.removerH), 1);
+        renderChipsHorarios();
+        atualizarPrevia();
+      });
+    });
+  }
+
   function fmtDateBR(iso){
     const d = parseDate(iso);
     return d.toLocaleDateString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", weekday:"short" });
@@ -2258,48 +2323,63 @@
   }
 
   function camposCompartilhadosValidos(){
+    const horarioComumOk = (modo === "massa" && bulkSub === "horarios")
+      ? true
+      : (document.getElementById("fInicio").value && document.getElementById("fFim").value);
     return selLab.value &&
       selEnsino.value &&
-      document.getElementById("fInicio").value &&
-      document.getElementById("fFim").value &&
+      horarioComumOk &&
       selResponsavelUso.value &&
       selResponsavelPedido.value &&
       document.getElementById("fDisciplina").value.trim() &&
       selCriadoPor.value;
   }
 
+  // monta a lista de candidatos com seu próprio horário — nos modos "especificas" e
+  // "recorrente" todo mundo usa o horário compartilhado lá em cima; no modo
+  // "horarios" cada linha já traz o seu próprio horário.
+  function candidatosComHorario(){
+    if(bulkSub === "horarios"){
+      return horariosEspecificos.map(h => ({ data:h.data, inicio:h.inicio, fim:h.fim }));
+    }
+    const ini = document.getElementById("fInicio").value;
+    const fim = document.getElementById("fFim").value;
+    return datasCandidatas().map(data => ({ data, inicio: ini, fim }));
+  }
+
   function atualizarPrevia(){
     if(modo !== "massa"){ previewBox.innerHTML = ""; atualizarTextoBotao(); return; }
 
-    const datas = datasCandidatas();
+    const candidatos = candidatosComHorario();
     const lab = selLab.value;
-    const ini = document.getElementById("fInicio").value;
-    const fim = document.getElementById("fFim").value;
 
-    if(datas.length === 0){
-      previewBox.innerHTML = `<div class="empty-hint" style="margin-top:8px;">Adicione datas para ver a prévia dos agendamentos.</div>`;
+    if(candidatos.length === 0){
+      const msg = bulkSub === "horarios"
+        ? "Adicione datas e horários para ver a prévia dos agendamentos."
+        : "Adicione datas para ver a prévia dos agendamentos.";
+      previewBox.innerHTML = `<div class="empty-hint" style="margin-top:8px;">${msg}</div>`;
       previewAtual = [];
       atualizarTextoBotao();
       return;
     }
 
-    previewAtual = datas.map(data=>{
+    previewAtual = candidatos.map(c=>{
       let ok = true, motivo = "Livre";
-      if(!ini || !fim){
-        ok = false; motivo = "Defina o horário início/fim acima";
-      } else if(minutos(fim) <= minutos(ini)){
+      if(!c.inicio || !c.fim){
+        ok = false; motivo = "Defina o horário início/fim";
+      } else if(minutos(c.fim) <= minutos(c.inicio)){
         ok = false; motivo = "Horário de fim precisa ser depois do início";
       } else {
         const conflito = eventos.find(e =>
-          e.status !== "cancelado" && e.data === data && e.laboratorio === lab &&
-          overlap(minutos(ini), minutos(fim), minutos(e.inicio), minutos(e.fim))
+          e.status !== "cancelado" && e.data === c.data && e.laboratorio === lab &&
+          overlap(minutos(c.inicio), minutos(c.fim), minutos(e.inicio), minutos(e.fim))
         );
         if(conflito){
           ok = false;
           motivo = `Conflito com ${conflito.inicio}–${conflito.fim} (${conflito.disciplina||"sem descrição"})`;
         }
       }
-      return { data, ok, motivo, marcado: ok };
+      return { data:c.data, inicio:c.inicio, fim:c.fim, ok, motivo, marcado: ok };
     });
 
     renderPreview();
@@ -2309,7 +2389,7 @@
     const linhas = previewAtual.map((p,i) => `
       <div class="preview-row ${p.ok?"livre":"conflito"}">
         <input type="checkbox" data-i="${i}" ${p.marcado?"checked":""} ${p.ok?"":"disabled"}>
-        <span class="pdata">${fmtDateBR(p.data)}</span>
+        <span class="pdata">${fmtDateBR(p.data)}${p.inicio?` · ${p.inicio}–${p.fim}`:""}</span>
         <span class="pstatus"><span class="badge ${p.ok?"ok":"bad"}">${p.ok?"livre":"conflito"}</span>${p.motivo}</span>
       </div>
     `).join("");
@@ -2366,14 +2446,20 @@
     btnCancelarAgendamento.style.display = "none";
     modeTabs.style.display = "flex";
     datasEspecificas = [];
+    horariosEspecificos = [];
     bulkSub = "especificas";
     document.querySelector('input[name="bulkSub"][value="especificas"]').checked = true;
     bulkEspecificas.style.display = "block";
     bulkRecorrente.style.display = "none";
+    bulkHorarios.style.display = "none";
     setDateVal(document.getElementById("bulkNovaData"), dataSelecionada);
     setDateVal(document.getElementById("bulkDe"), dataSelecionada);
     setDateVal(document.getElementById("bulkAte"), "");
+    setDateVal(document.getElementById("bulkHorData"), dataSelecionada);
+    inputBulkHorInicio.value = "";
+    inputBulkHorFim.value = "";
     renderChips();
+    renderChipsHorarios();
     setModo("unico");
     overlay.classList.add("open");
     document.getElementById("fInicio").focus();
@@ -2475,7 +2561,8 @@
       status: document.getElementById("fStatus").value,
     };
 
-    if(minutos(camposComuns.fim) <= minutos(camposComuns.inicio)){
+    const pulaHorarioComum = modo === "massa" && bulkSub === "horarios";
+    if(!pulaHorarioComum && minutos(camposComuns.fim) <= minutos(camposComuns.inicio)){
       mostrarErro("O horário de fim precisa ser depois do horário de início.");
       return;
     }
@@ -2491,7 +2578,7 @@
       selecionadas.forEach(p=>{
         const id = novoId();
         idsNovos.push(id);
-        eventos.push({ id, data:p.data, ...camposComuns });
+        eventos.push({ id, ...camposComuns, data:p.data, inicio:p.inicio, fim:p.fim });
       });
       fecharModal();
       dataSelecionada = selecionadas[0].data;
