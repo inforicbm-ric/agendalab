@@ -312,6 +312,8 @@
     background:var(--surface);
     border:1px solid var(--line);
     border-radius:14px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
   }
 
   .board-scroll{
@@ -917,12 +919,28 @@
     border-radius:20px;
     margin-right:6px;
   }
-  .badge.ok{ background:var(--accent-dim); color:var(--accent); }
+  .badge.ok{ background:#dff6dd; color:#107c10; }
   .badge.bad{ background:var(--danger-dim); color:var(--danger); }
   .preview-summary{
     font-size:12.5px;
     color:var(--ink-muted);
     margin-top:10px;
+  }
+  .preview-summary-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .preview-copiar{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .preview-copiar button{
+    font-size:12px;
+    padding:6px 10px;
   }
 
   /* ---------- Campos de data/hora customizados (dd/mm/aaaa e 24h) ---------- */
@@ -1033,6 +1051,22 @@
     color:#fff;
     box-shadow:0 1px 3px rgba(22,34,31,0.18);
   }
+  .badge-count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    margin-left:6px;
+    border-radius:20px;
+    background:var(--danger);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+  }
+  .badge-count.tone-vermelho{ background:var(--danger); }
+  .badge-count.tone-verde{ background:#107c10; }
 
   /* ---------- Lista ---------- */
   .lista-controles{
@@ -1082,12 +1116,12 @@
     overflow:auto;
     max-height:640px;
   }
-  #listaTable{
+  #listaTable, #conflitosTable{
     width:100%;
     border-collapse:collapse;
     font-size:13px;
   }
-  #listaTable thead th{
+  #listaTable thead th, #conflitosTable thead th{
     position:sticky;
     top:0;
     background:var(--surface-2);
@@ -1099,18 +1133,29 @@
     letter-spacing:0.03em;
     color:var(--ink-muted);
     border-bottom:1px solid var(--line);
-    cursor:pointer;
     white-space:nowrap;
   }
+  #listaTable thead th{ cursor:pointer; }
   #listaTable thead th:hover{ color:var(--accent); }
   #listaTable thead th .arrow{ margin-left:4px; color:var(--accent); }
-  #listaTable tbody td{
+  #listaTable tbody td, #conflitosTable tbody td{
     padding:10px 12px;
     border-bottom:1px solid var(--line);
     vertical-align:top;
   }
-  #listaTable tbody tr{ cursor:pointer; }
+  #listaTable tbody tr, #conflitosTable tbody tr{ cursor:pointer; }
   #listaTable tbody tr:hover{ background:var(--surface-2); }
+  #conflitosTable tbody tr:hover{ background:var(--surface-2); }
+  .btn-icone-tabela{
+    border:none;
+    background:transparent;
+    color:var(--ink-muted);
+    cursor:pointer;
+    padding:4px 6px;
+    border-radius:6px;
+    display:inline-flex;
+  }
+  .btn-icone-tabela:hover{ background:var(--danger-dim); color:var(--danger); }
   #listaTable tbody tr.cancelado{ opacity:0.55; }
   #listaTable tbody tr.cancelado td:nth-child(9){ text-decoration:line-through; }
   .status-pill{
@@ -1121,6 +1166,7 @@
     padding:2px 8px;
     border-radius:20px;
   }
+  .status-pill.a_realizar{ background:#ede4fb; color:#6b3fa0; }
   .status-pill.realizado{ background:var(--accent-dim); color:var(--accent); }
   .status-pill.nao_realizado{ background:var(--amber-dim); color:#9a5300; }
   .status-pill.cancelado{ background:#eceeed; color:var(--ink-muted); }
@@ -1173,6 +1219,7 @@
       <div class="view-tabs" id="viewTabs">
         <button type="button" class="view-tab active" data-view="grade"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M8 2v3M16 2v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/></svg> Grade</button>
         <button type="button" class="view-tab" data-view="lista"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M4 6h16M4 12h16M4 18h16"/></svg> Lista</button>
+        <button type="button" class="view-tab" data-view="conflitos"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M12 3.5 2.5 20h19L12 3.5Z"/><path d="M12 9.5v4.2"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg> Conflitos<span class="badge-count tone-vermelho" id="badgeConflitosVermelho" style="display:none;">0</span><span class="badge-count tone-verde" id="badgeConflitosVerde" style="display:none;">0</span></button>
       </div>
       <span class="toolbar-sep" id="sepCancelados" style="display:none;"></span>
       <label class="toggle-cancelados" id="toggleCanceladosWrap" style="display:none;">
@@ -1248,6 +1295,31 @@
       <div class="empty-day" id="listaVazio" style="display:none;">Nenhum agendamento encontrado com esses filtros.</div>
     </div>
     <div class="preview-summary" id="listaContagem"></div>
+  </div>
+
+  <div id="conflitosWrap" style="display:none;">
+    <div class="lista-controles">
+      <div class="empty-hint" style="display:block;">Agendamentos que não puderam ser criados por conflito de horário. Quando o horário liberar, a linha vira "disponível" — clique nela para criar.</div>
+      <button type="button" class="primary" id="btnCriarDisponiveis" style="display:none; margin-left:auto;"></button>
+    </div>
+    <div class="lista-table-wrap">
+      <table id="conflitosTable">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Horário</th>
+            <th>Lab</th>
+            <th>Responsável</th>
+            <th>Disciplina</th>
+            <th>Status</th>
+            <th>Motivo do conflito</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="conflitosTbody"></tbody>
+      </table>
+      <div class="empty-day" id="conflitosVazio" style="display:none;">Nenhum conflito pendente — tudo tranquilo por aqui.</div>
+    </div>
   </div>
 
   <div class="sync-note">
@@ -1383,6 +1455,7 @@
           <div class="field full">
             <label for="fStatus">Status</label>
             <select id="fStatus">
+              <option value="a_realizar">A REALIZAR</option>
               <option value="realizado">REALIZADO</option>
               <option value="nao_realizado">NÃO REALIZADO</option>
               <option value="cancelado">CANCELADO</option>
@@ -1521,6 +1594,10 @@
   let dataSelecionada = dataExemplo;
   let labArrastado = null;
   let idsRecemSalvos = [];
+  let conflitosPendentes = []; // [{idConflito, motivoConflito, disponivel, data, ensino, laboratorio, inicio, fim, responsavelUso, responsavelPedido, turma, cursoSetor, disciplina, requisicao, criadoPor, status}]
+  let seqConflito = 1;
+  function novoIdConflito(){ return "CF" + (seqConflito++).toString().padStart(4,"0"); }
+  let conflitoEmEdicao = null; // idConflito sendo criado a partir da tela de conflitos, se houver
   let mostrarCancelados = false;
   let editandoId = null;
 
@@ -1712,8 +1789,23 @@
 
   let viewMode = "grade"; // "grade" | "lista"
 
+  function avancarStatusAutomatico(){
+    const hojeIso = fmtDate(new Date());
+    const agoraMin = new Date().getHours()*60 + new Date().getMinutes();
+    eventos.forEach(e=>{
+      if(e.status !== "a_realizar") return;
+      if(e.data < hojeIso || (e.data === hojeIso && minutos(e.inicio) <= agoraMin)){
+        e.status = "realizado";
+      }
+    });
+  }
+
   function render(){
-    if(viewMode === "lista") renderLista(); else renderGrade();
+    avancarStatusAutomatico();
+    reavaliarConflitos();
+    if(viewMode === "lista") renderLista();
+    else if(viewMode === "conflitos") renderConflitos();
+    else renderGrade();
   }
 
   const statsRow = document.getElementById("statsRow");
@@ -1722,7 +1814,7 @@
 
   function renderDashboardDia(intervalo){
     const todosDoDia = eventos.filter(e => e.data === dataSelecionada);
-    const statusRealizado = todosDoDia.filter(e => e.status === "realizado");
+    const statusRealizado = todosDoDia.filter(e => e.status === "realizado" || e.status === "a_realizar");
     const naoRealizados = todosDoDia.filter(e => e.status === "nao_realizado");
     const cancelados = todosDoDia.filter(e => e.status === "cancelado");
 
@@ -1811,7 +1903,7 @@
     setDateVal(inputData, dataSelecionada);
     diaSemanaLabel.textContent = DIAS_SEMANA[parseDate(dataSelecionada).getDay()];
 
-    const doDia = eventos.filter(e => e.data === dataSelecionada && e.status === "realizado");
+    const doDia = eventos.filter(e => e.data === dataSelecionada && (e.status === "realizado" || e.status === "a_realizar"));
 
     const intervalo = calcularIntervaloDia(doDia);
     DIA_INICIO_MIN = intervalo.inicio;
@@ -1942,6 +2034,7 @@
     viewTabs.querySelectorAll(".view-tab").forEach(b=> b.classList.toggle("active", b.dataset.view === v));
     gradeWrap.style.display = v === "grade" ? "block" : "none";
     listaWrap.style.display = v === "lista" ? "block" : "none";
+    document.getElementById("conflitosWrap").style.display = v === "conflitos" ? "block" : "none";
     dateNavGrade.style.display = v === "grade" ? "flex" : "none";
     diaSemanaLabel.style.display = v === "grade" ? "inline" : "none";
     document.getElementById("toggleCanceladosWrap").style.display = v === "lista" ? "flex" : "none";
@@ -2037,7 +2130,7 @@
         <td>${escapeHtml(e.cursoSetor||"")}</td>
         <td>${escapeHtml(e.disciplina||"")}</td>
         <td>${escapeHtml(e.requisicao||"—")}</td>
-        <td><span class="status-pill ${e.status}">${e.status === "cancelado" ? "cancelado" : e.status === "nao_realizado" ? "não realizado" : "realizado"}</span></td>
+        <td><span class="status-pill ${e.status}">${e.status === "cancelado" ? "cancelado" : e.status === "nao_realizado" ? "não realizado" : e.status === "a_realizar" ? "a realizar" : "realizado"}</span></td>
       </tr>
     `).join("");
 
@@ -2056,6 +2149,149 @@
       }
     });
   }
+
+  /* ============================================================
+     CONFLITOS PENDENTES
+     ============================================================ */
+  function adicionarConflitoPendente(dados, motivo){
+    const jaExiste = conflitosPendentes.some(c =>
+      c.data === dados.data && c.laboratorio === dados.laboratorio &&
+      c.inicio === dados.inicio && c.fim === dados.fim
+    );
+    if(jaExiste) return false;
+    conflitosPendentes.push({
+      idConflito: novoIdConflito(),
+      motivoConflito: motivo,
+      disponivel: false,
+      ...dados,
+    });
+    return true;
+  }
+
+  function reavaliarConflitos(){
+    if(conflitosPendentes.length === 0) return;
+    conflitosPendentes.forEach(c=>{
+      const conflito = eventos.find(e =>
+        e.status !== "cancelado" && e.data === c.data && e.laboratorio === c.laboratorio &&
+        overlap(minutos(c.inicio), minutos(c.fim), minutos(e.inicio), minutos(e.fim))
+      );
+      c.disponivel = !conflito;
+    });
+    atualizarBadgeConflitos();
+  }
+
+  function atualizarBadgeConflitos(){
+    const badgeVermelho = document.getElementById("badgeConflitosVermelho");
+    const badgeVerde = document.getElementById("badgeConflitosVerde");
+    if(!badgeVermelho || !badgeVerde) return;
+    const emConflito = conflitosPendentes.filter(c => !c.disponivel).length;
+    const disponiveis = conflitosPendentes.filter(c => c.disponivel).length;
+    badgeVermelho.textContent = emConflito;
+    badgeVermelho.style.display = emConflito > 0 ? "inline-flex" : "none";
+    badgeVerde.textContent = disponiveis;
+    badgeVerde.style.display = disponiveis > 0 ? "inline-flex" : "none";
+  }
+
+  function removerConflito(idConflito){
+    conflitosPendentes = conflitosPendentes.filter(c => c.idConflito !== idConflito);
+    atualizarBadgeConflitos();
+    render();
+  }
+
+  function criarTodosDisponiveis(){
+    const disponiveis = conflitosPendentes.filter(c => c.disponivel);
+    if(disponiveis.length === 0) return;
+    const idsNovos = [];
+    disponiveis.forEach(c=>{
+      const id = novoId();
+      idsNovos.push(id);
+      const { idConflito, motivoConflito, disponivel, ...dadosEvento } = c;
+      eventos.push({ id, ...dadosEvento });
+    });
+    conflitosPendentes = conflitosPendentes.filter(c => !c.disponivel);
+    marcarRecemSalvos(idsNovos);
+    mostrarToast(`🎉 ${idsNovos.length} agendamento${idsNovos.length===1?"":"s"} criado${idsNovos.length===1?"":"s"} a partir de conflitos liberados!`);
+    atualizarBadgeConflitos();
+  }
+
+  function abrirConflito(idConflito){
+    const c = conflitosPendentes.find(x => x.idConflito === idConflito);
+    if(!c) return;
+    editandoId = null;
+    conflitoEmEdicao = idConflito;
+    atualizarTodosOsCombos();
+    formMsg.classList.remove("show");
+    modalTitulo.textContent = "Criar a partir de conflito";
+    modalSub.textContent = c.disponivel ? "Horário disponível agora — revise e confirme." : "Ainda em conflito — ajuste ou tente novamente.";
+    setDateVal(document.getElementById("fData"), c.data);
+    selLab.value = c.laboratorio;
+    selEnsino.value = c.ensino || ENSINOS[0] || "";
+    document.getElementById("fInicio").value = c.inicio;
+    document.getElementById("fFim").value = c.fim;
+    selResponsavelUso.value = c.responsavelUso || "";
+    selResponsavelPedido.value = c.responsavelPedido || "";
+    document.getElementById("fTurma").value = c.turma || "";
+    selCursoSetor.value = c.cursoSetor || "";
+    document.getElementById("fDisciplina").value = c.disciplina || "";
+    selRequisicao.value = c.requisicao || "";
+    selCriadoPor.value = c.criadoPor || "";
+    document.getElementById("fStatus").value = c.status || "realizado";
+    btnCancelarAgendamento.style.display = "none";
+    modeTabs.style.display = "none";
+    setModo("unico");
+    overlay.classList.add("open");
+  }
+
+  function renderConflitos(){
+    const ordenados = [...conflitosPendentes].sort((a,b) =>
+      a.data === b.data ? minutos(a.inicio) - minutos(b.inicio) : (a.data < b.data ? -1 : 1)
+    );
+    const tbody = document.getElementById("conflitosTbody");
+    const vazio = document.getElementById("conflitosVazio");
+    const btnDisponiveis = document.getElementById("btnCriarDisponiveis");
+    const disponiveis = conflitosPendentes.filter(c => c.disponivel).length;
+
+    btnDisponiveis.style.display = disponiveis > 0 ? "inline-flex" : "none";
+    btnDisponiveis.textContent = `✓ Criar todos os disponíveis (${disponiveis})`;
+
+    if(ordenados.length === 0){
+      tbody.innerHTML = "";
+      vazio.style.display = "block";
+      atualizarBadgeConflitos();
+      return;
+    }
+    vazio.style.display = "none";
+
+    tbody.innerHTML = ordenados.map(c => `
+      <tr data-id="${c.idConflito}">
+        <td>${fmtDateBR(c.data)}</td>
+        <td>${c.inicio}–${c.fim}</td>
+        <td>LAB ${c.laboratorio}</td>
+        <td>${escapeHtml(c.responsavelUso||"")}</td>
+        <td>${escapeHtml(c.disciplina||"")}</td>
+        <td><span class="badge ${c.disponivel?"ok":"bad"}">${c.disponivel?"disponível":"em conflito"}</span></td>
+        <td>${escapeHtml(c.motivoConflito||"")}</td>
+        <td><button type="button" class="btn-icone-tabela" data-remover="${c.idConflito}" title="Descartar">${icone("x")}</button></td>
+      </tr>
+    `).join("");
+
+    tbody.querySelectorAll("tr").forEach(tr=>{
+      tr.addEventListener("click", (ev)=>{
+        if(ev.target.closest("[data-remover]")) return;
+        abrirConflito(tr.dataset.id);
+      });
+    });
+    tbody.querySelectorAll("[data-remover]").forEach(b=>{
+      b.addEventListener("click", (ev)=>{
+        ev.stopPropagation();
+        removerConflito(b.dataset.remover);
+      });
+    });
+
+    atualizarBadgeConflitos();
+  }
+
+  document.getElementById("btnCriarDisponiveis").addEventListener("click", criarTodosDisponiveis);
 
   /* ============================================================
      NAVEGAÇÃO DE DATA
@@ -2385,6 +2621,26 @@
     renderPreview();
   }
 
+  function montarTextoPreview(linhas){
+    const cabecalho = ["Data","Horário","Status","Detalhe"].join("\t");
+    const corpo = linhas.map(p =>
+      [fmtDateBR(p.data), `${p.inicio||"—"}–${p.fim||"—"}`, p.ok?"LIVRE":"CONFLITO", p.ok?"—":p.motivo].join("\t")
+    );
+    return [cabecalho, ...corpo].join("\n");
+  }
+
+  async function copiarPreview(soConflitos){
+    const linhas = soConflitos ? previewAtual.filter(p=>!p.ok) : previewAtual;
+    if(linhas.length === 0) return;
+    const texto = montarTextoPreview(linhas);
+    try{
+      await navigator.clipboard.writeText(texto);
+      mostrarToast("✓ Copiado para a área de transferência!");
+    }catch(err){
+      mostrarErro("Não foi possível copiar automaticamente. Selecione e copie manualmente.");
+    }
+  }
+
   function renderPreview(){
     const linhas = previewAtual.map((p,i) => `
       <div class="preview-row ${p.ok?"livre":"conflito"}">
@@ -2399,8 +2655,18 @@
 
     previewBox.innerHTML = `
       <div class="preview-list">${linhas}</div>
-      <div class="preview-summary">${marcados} de ${previewAtual.length} data(s) serão agendadas${comConflito?` · ${comConflito} com conflito (ignoradas)`:""}.</div>
+      <div class="preview-summary-row">
+        <div class="preview-summary">${marcados} de ${previewAtual.length} data(s) serão agendadas${comConflito?` · ${comConflito} com conflito (ignoradas)`:""}.</div>
+        <div class="preview-copiar">
+          <button type="button" class="ghost" id="btnCopiarTudo">${icone("etiqueta")} Copiar tudo</button>
+          ${comConflito ? `<button type="button" class="ghost" id="btnCopiarConflitos">${icone("alerta")} Copiar só conflitos</button>` : ""}
+        </div>
+      </div>
     `;
+
+    document.getElementById("btnCopiarTudo").addEventListener("click", ()=> copiarPreview(false));
+    const btnConflitos = document.getElementById("btnCopiarConflitos");
+    if(btnConflitos) btnConflitos.addEventListener("click", ()=> copiarPreview(true));
 
     previewBox.querySelectorAll('input[type="checkbox"][data-i]').forEach(cb=>{
       cb.addEventListener("change", ()=>{
@@ -2430,6 +2696,7 @@
 
   function abrirNovo(){
     editandoId = null;
+    conflitoEmEdicao = null;
     form.reset();
     atualizarTodosOsCombos();
     formMsg.classList.remove("show");
@@ -2442,7 +2709,7 @@
     selResponsavelPedido.value = "";
     selCursoSetor.value = "";
     selRequisicao.value = "";
-    document.getElementById("fStatus").value = "realizado";
+    document.getElementById("fStatus").value = "a_realizar";
     btnCancelarAgendamento.style.display = "none";
     modeTabs.style.display = "flex";
     datasEspecificas = [];
@@ -2469,6 +2736,7 @@
     const e = eventos.find(x=>x.id===id);
     if(!e) return;
     editandoId = id;
+    conflitoEmEdicao = null;
     atualizarTodosOsCombos();
     formMsg.classList.remove("show");
     modalTitulo.textContent = "Editar agendamento";
@@ -2569,21 +2837,40 @@
 
     /* ---------- MODO EM MASSA ---------- */
     if(modo === "massa"){
-      const selecionadas = previewAtual.filter(p=>p.marcado && p.ok);
-      if(selecionadas.length === 0){
-        mostrarErro("Nenhuma data válida selecionada para agendar.");
+      if(previewAtual.length === 0){
+        mostrarErro("Nenhuma data/horário definido para agendar.");
         return;
       }
+      const selecionadas = previewAtual.filter(p=>p.marcado && p.ok);
+      const conflitantes = previewAtual.filter(p=>!p.ok);
+
       const idsNovos = [];
       selecionadas.forEach(p=>{
         const id = novoId();
         idsNovos.push(id);
         eventos.push({ id, ...camposComuns, data:p.data, inicio:p.inicio, fim:p.fim });
       });
+
+      let enviadosConflito = 0;
+      conflitantes.forEach(p=>{
+        const dadosConflito = { ...camposComuns, data:p.data, inicio:p.inicio, fim:p.fim };
+        if(adicionarConflitoPendente(dadosConflito, p.motivo)) enviadosConflito++;
+      });
+
+      if(idsNovos.length === 0 && enviadosConflito === 0){
+        mostrarErro("Nenhuma data válida selecionada para agendar.");
+        return;
+      }
+
       fecharModal();
-      dataSelecionada = selecionadas[0].data;
-      marcarRecemSalvos(idsNovos);
-      mostrarToast(`🎉 ${idsNovos.length} agendamento${idsNovos.length===1?"":"s"} criado${idsNovos.length===1?"":"s"} com sucesso!`);
+      if(selecionadas.length) dataSelecionada = selecionadas[0].data;
+      if(idsNovos.length) marcarRecemSalvos(idsNovos);
+
+      let msg = "";
+      if(idsNovos.length) msg += `🎉 ${idsNovos.length} agendamento${idsNovos.length===1?"":"s"} criado${idsNovos.length===1?"":"s"}`;
+      if(enviadosConflito) msg += (msg ? " · " : "") + `⚠️ ${enviadosConflito} em conflito, enviado${enviadosConflito===1?"":"s"} para a aba Conflitos`;
+      if(msg) mostrarToast(msg);
+      atualizarBadgeConflitos();
       return;
     }
 
@@ -2624,6 +2911,11 @@
     fecharModal();
     dataSelecionada = dados.data;
     marcarRecemSalvos([idSalvo]);
+    if(conflitoEmEdicao){
+      conflitosPendentes = conflitosPendentes.filter(c => c.idConflito !== conflitoEmEdicao);
+      conflitoEmEdicao = null;
+      atualizarBadgeConflitos();
+    }
     mostrarToast(eraNovo ? "🎉 Agendamento criado com sucesso!" : "✓ Agendamento atualizado!");
   });
 
@@ -2744,10 +3036,11 @@
      ============================================================ */
   render();
 
-  // reavalia a cada minuto: atualiza a linha de "agora" e o destaque dos cards
-  // que estão acontecendo neste exato momento, sem precisar recarregar a página
+  // reavalia a cada 30s: atualiza a linha de "agora", o destaque dos cards,
+  // a troca automática de status e a disponibilidade de conflitos — em
+  // qualquer aba que esteja aberta no momento
   setInterval(()=>{
-    if(viewMode === "grade") renderGrade();
+    render();
   }, 30000);
 
 })();
