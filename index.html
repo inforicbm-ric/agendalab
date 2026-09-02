@@ -749,12 +749,14 @@
 
   .modal-actions{
     display:flex;
+    flex-wrap:wrap;
     justify-content:space-between;
     align-items:center;
     margin-top:20px;
     gap:10px;
+    row-gap:12px;
   }
-  .modal-actions .left{ display:flex; gap:8px; }
+  .modal-actions .left{ display:flex; gap:8px; flex-wrap:wrap; }
 
   button.ghost{
     background:transparent;
@@ -1196,6 +1198,9 @@
     .lab-col{ min-width:92px; }
     .time-col{ flex:0 0 48px; }
     button.primary{ padding:9px 12px; font-size:13px; }
+    .modal-actions{ flex-direction:column-reverse; align-items:stretch; }
+    .modal-actions .left{ width:100%; }
+    .modal-actions .left button{ flex:1; justify-content:center; }
   }
 
   @media (max-width: 420px){
